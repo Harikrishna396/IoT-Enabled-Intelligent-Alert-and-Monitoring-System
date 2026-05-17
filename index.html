@@ -1,0 +1,1422 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>IoT-Enabled Intelligent Alert and Monitoring System
+</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;600;700;900&family=Rajdhani:wght@300;400;500;600;700&family=Share+Tech+Mono&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.0/chart.umd.min.js"></script>
+<style>
+/* ═══════════════════════════════════════════
+   ROOT & RESET
+═══════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#040810;--bg2:#070d1a;--bg3:#0b1425;--bg4:#0f1c34;
+  --panel:rgba(10,20,45,.85);--panel2:rgba(15,28,52,.9);
+  --bdr:rgba(0,180,255,.15);--bdr2:rgba(0,180,255,.3);--bdr3:rgba(0,180,255,.5);
+  --blue:#00b4ff;--blue2:#0066cc;--teal:#00e5cc;
+  --green:#00ff88;--green2:#00cc66;
+  --yellow:#ffcc00;--orange:#ff8800;
+  --red:#ff2244;--red2:#cc0022;
+  --purple:#9966ff;--pink:#ff44aa;
+  --txt:#c8deff;--txt2:#7a9cc8;--txt3:#4a6a9a;
+  --font-display:'Orbitron',monospace;
+  --font-body:'Rajdhani',sans-serif;
+  --font-mono:'Share Tech Mono',monospace;
+  --sidebar:260px;
+}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--txt);font-family:var(--font-body);font-size:15px;line-height:1.5;overflow-x:hidden;min-height:100vh;}
+::selection{background:rgba(0,180,255,.3);color:#fff;}
+::-webkit-scrollbar{width:5px;height:5px;}
+::-webkit-scrollbar-track{background:var(--bg);}
+::-webkit-scrollbar-thumb{background:var(--blue2);border-radius:3px;}
+button,input,select{font-family:inherit;}
+
+/* ═══════════════════════════════════════════
+   SCAN LINE OVERLAY
+═══════════════════════════════════════════ */
+body::before{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.05) 2px,rgba(0,0,0,.05) 4px);
+  animation:scan 8s linear infinite;
+}
+@keyframes scan{from{background-position:0 0}to{background-position:0 200px}}
+
+/* GRID BG */
+body::after{
+  content:'';position:fixed;inset:0;z-index:0;pointer-events:none;
+  background-image:linear-gradient(rgba(0,100,200,.04) 1px,transparent 1px),linear-gradient(90deg,rgba(0,100,200,.04) 1px,transparent 1px);
+  background-size:40px 40px;
+}
+
+/* ═══════════════════════════════════════════
+   LAYOUT
+═══════════════════════════════════════════ */
+#app{display:flex;min-height:100vh;position:relative;z-index:1;}
+
+/* ═══════════════════════════════════════════
+   SIDEBAR
+═══════════════════════════════════════════ */
+#sidebar{
+  width:var(--sidebar);flex-shrink:0;
+  background:var(--panel);
+  border-right:1px solid var(--bdr);
+  display:flex;flex-direction:column;
+  position:fixed;top:0;left:0;bottom:0;z-index:50;
+  backdrop-filter:blur(20px);
+  transition:transform .3s ease;
+}
+.sb-logo{padding:24px 20px 20px;border-bottom:1px solid var(--bdr);}
+.sb-logo-txt{font-family:var(--font-display);font-size:1.3rem;font-weight:900;letter-spacing:2px;
+  background:linear-gradient(90deg,var(--blue),var(--teal));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+.sb-logo-sub{font-size:.7rem;color:var(--txt3);letter-spacing:3px;text-transform:uppercase;margin-top:2px;font-family:var(--font-mono);}
+.sb-status{margin:12px 20px;padding:8px 12px;border-radius:6px;background:rgba(0,255,136,.08);border:1px solid rgba(0,255,136,.2);
+  font-family:var(--font-mono);font-size:.7rem;color:var(--green);display:flex;align-items:center;gap:8px;}
+.sb-status::before{content:'';width:7px;height:7px;background:var(--green);border-radius:50%;box-shadow:0 0 8px var(--green);animation:pulse 2s ease infinite;}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+
+.sb-nav{flex:1;padding:12px 0;overflow-y:auto;}
+.sb-section{padding:8px 20px 4px;font-size:.65rem;color:var(--txt3);letter-spacing:3px;text-transform:uppercase;font-family:var(--font-mono);}
+
+/* ── NEW: sidebar item wrapper so the newtab icon sits to the right ── */
+.sb-item-wrap{display:flex;align-items:center;margin:1px 8px;border-radius:6px;position:relative;}
+.sb-item-wrap:hover .sb-newtab{opacity:1;}
+.sb-item{
+  display:flex;align-items:center;gap:12px;padding:11px 8px 11px 12px;cursor:pointer;
+  transition:all .2s;flex:1;
+  font-size:.92rem;font-weight:600;color:var(--txt2);letter-spacing:.5px;border-radius:6px;
+}
+.sb-item:hover{background:rgba(0,180,255,.08);color:var(--blue);}
+.sb-item.active{background:rgba(0,180,255,.12);color:var(--blue);border-left:3px solid var(--blue);}
+.sb-icon{width:20px;height:20px;flex-shrink:0;opacity:.8;}
+.sb-badge{margin-left:auto;background:var(--red);color:#fff;font-size:.65rem;padding:2px 7px;border-radius:99px;font-family:var(--font-mono);}
+.sb-badge.warn{background:var(--yellow);color:#000;}
+.sb-badge.ok{background:var(--green2);color:#000;}
+
+/* ── NEW TAB BUTTON ── */
+.sb-newtab{
+  opacity:0;transition:opacity .2s;
+  background:none;border:1px solid var(--bdr);border-radius:4px;
+  color:var(--txt3);cursor:pointer;padding:3px 6px;font-size:.65rem;
+  white-space:nowrap;flex-shrink:0;margin-right:6px;
+  font-family:var(--font-mono);
+}
+.sb-newtab:hover{border-color:var(--bdr3);color:var(--blue);}
+.sb-newtab title{display:none;}
+
+.sb-bottom{padding:16px 20px;border-top:1px solid var(--bdr);}
+.sb-time{font-family:var(--font-mono);font-size:.85rem;color:var(--blue);text-align:center;}
+.sb-date{font-family:var(--font-mono);font-size:.68rem;color:var(--txt3);text-align:center;margin-top:2px;}
+
+/* ═══════════════════════════════════════════
+   MAIN CONTENT
+═══════════════════════════════════════════ */
+#main{flex:1;margin-left:var(--sidebar);display:flex;flex-direction:column;min-height:100vh;}
+
+/* TOPBAR */
+#topbar{
+  height:60px;background:var(--panel2);border-bottom:1px solid var(--bdr);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 24px;position:sticky;top:0;z-index:40;backdrop-filter:blur(20px);
+}
+.tb-title{font-family:var(--font-display);font-size:1rem;font-weight:700;letter-spacing:1px;color:var(--blue);}
+.tb-right{display:flex;align-items:center;gap:16px;}
+.tb-health{display:flex;align-items:center;gap:8px;font-family:var(--font-mono);font-size:.78rem;}
+.health-bar{width:80px;height:6px;background:rgba(255,255,255,.1);border-radius:99px;overflow:hidden;}
+.health-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--green),var(--teal));transition:width .5s;}
+.tb-role-btn{padding:6px 16px;border-radius:5px;border:1px solid var(--bdr2);background:rgba(0,180,255,.08);
+  color:var(--blue);font-size:.78rem;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.5px;}
+.tb-role-btn:hover{background:rgba(0,180,255,.2);border-color:var(--bdr3);}
+.tb-emergency{padding:6px 16px;border-radius:5px;border:1px solid rgba(255,34,68,.4);background:rgba(255,34,68,.08);
+  color:var(--red);font-size:.78rem;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:1px;animation:emg-idle 3s ease infinite;}
+@keyframes emg-idle{0%,90%,100%{box-shadow:none;}95%{box-shadow:0 0 12px rgba(255,34,68,.4);}}
+.tb-emergency:hover{background:rgba(255,34,68,.2);}
+
+/* ── NEW: topbar new-tab hint ── */
+.tb-newtab-hint{font-family:var(--font-mono);font-size:.65rem;color:var(--txt3);padding:4px 10px;border:1px solid var(--bdr);border-radius:4px;cursor:pointer;transition:all .2s;}
+.tb-newtab-hint:hover{border-color:var(--bdr2);color:var(--blue);}
+
+/* ═══════════════════════════════════════════
+   PAGES
+═══════════════════════════════════════════ */
+.page{display:none;padding:24px;flex:1;animation:pageIn .35s ease;}
+.page.active{display:block;}
+@keyframes pageIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+/* PAGE HEADER */
+.ph{display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;}
+.ph-title{font-family:var(--font-display);font-size:1.3rem;font-weight:700;letter-spacing:1px;}
+.ph-sub{font-size:.8rem;color:var(--txt3);margin-top:2px;font-family:var(--font-mono);}
+
+/* ═══════════════════════════════════════════
+   STAT CARDS (Landing)
+═══════════════════════════════════════════ */
+.stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px;}
+.stat-card{background:var(--panel);border:1px solid var(--bdr);border-radius:10px;padding:20px;
+  position:relative;overflow:hidden;transition:all .3s;}
+.stat-card::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;}
+.stat-card.blue::before{background:linear-gradient(90deg,transparent,var(--blue),transparent);}
+.stat-card.green::before{background:linear-gradient(90deg,transparent,var(--green),transparent);}
+.stat-card.red::before{background:linear-gradient(90deg,transparent,var(--red),transparent);}
+.stat-card.amber::before{background:linear-gradient(90deg,transparent,var(--yellow),transparent);}
+.stat-card:hover{border-color:var(--bdr2);transform:translateY(-2px);}
+.sc-label{font-size:.72rem;color:var(--txt3);text-transform:uppercase;letter-spacing:2px;font-family:var(--font-mono);margin-bottom:8px;}
+.sc-value{font-family:var(--font-display);font-size:2rem;font-weight:700;line-height:1;}
+.sc-value.blue{color:var(--blue);}
+.sc-value.green{color:var(--green);}
+.sc-value.red{color:var(--red);}
+.sc-value.amber{color:var(--yellow);}
+.sc-sub{font-size:.78rem;color:var(--txt3);margin-top:4px;}
+.sc-icon{position:absolute;right:16px;top:50%;transform:translateY(-50%);font-size:2rem;opacity:.15;}
+.sc-trend{display:flex;align-items:center;gap:4px;font-size:.72rem;margin-top:6px;}
+.sc-trend.up{color:var(--green);}
+.sc-trend.dn{color:var(--red);}
+
+/* ═══════════════════════════════════════════
+   MACHINE CARDS
+═══════════════════════════════════════════ */
+.machine-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(340px,1fr));gap:18px;}
+.machine-card{
+  background:var(--panel);border-radius:12px;overflow:hidden;
+  border:1px solid var(--bdr);position:relative;transition:all .35s;cursor:pointer;
+}
+.machine-card:hover{border-color:var(--bdr3);box-shadow:0 0 30px rgba(0,180,255,.08);}
+.machine-card.status-ok{border-color:rgba(0,255,136,.25);}
+.machine-card.status-warn{border-color:rgba(255,204,0,.35);}
+.machine-card.status-critical{border-color:rgba(255,34,68,.5);box-shadow:0 0 20px rgba(255,34,68,.12);animation:critical-pulse 2s ease infinite;}
+@keyframes critical-pulse{0%,100%{box-shadow:0 0 20px rgba(255,34,68,.12);}50%{box-shadow:0 0 35px rgba(255,34,68,.3);}}
+.mc-header{padding:14px 18px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.2);}
+.mc-name{font-family:var(--font-display);font-size:.82rem;font-weight:700;letter-spacing:1px;}
+.mc-id{font-family:var(--font-mono);font-size:.65rem;color:var(--txt3);margin-top:1px;}
+.mc-status{display:flex;align-items:center;gap:6px;font-size:.72rem;font-weight:700;text-transform:uppercase;letter-spacing:1px;}
+.status-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0;}
+.status-dot.ok{background:var(--green);box-shadow:0 0 8px var(--green);animation:pulse 2s ease infinite;}
+.status-dot.warn{background:var(--yellow);box-shadow:0 0 8px var(--yellow);animation:pulse 1.5s ease infinite;}
+.status-dot.crit{background:var(--red);box-shadow:0 0 10px var(--red);animation:pulse 1s ease infinite;}
+
+.mc-sensors{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding:14px 18px;}
+.sensor{background:rgba(0,0,0,.25);border:1px solid var(--bdr);border-radius:7px;padding:10px 12px;transition:all .3s;}
+.sensor.alert{border-color:rgba(255,34,68,.5);background:rgba(255,34,68,.06);}
+.sensor.warn{border-color:rgba(255,204,0,.4);background:rgba(255,204,0,.05);}
+.s-name{font-size:.67rem;color:var(--txt3);text-transform:uppercase;letter-spacing:1.5px;font-family:var(--font-mono);margin-bottom:4px;}
+.s-val{font-family:var(--font-mono);font-size:1.1rem;font-weight:700;}
+.s-val.ok{color:var(--teal);}
+.s-val.warn{color:var(--yellow);}
+.s-val.crit{color:var(--red);}
+.s-unit{font-size:.65rem;color:var(--txt3);margin-left:2px;}
+.s-bar{height:3px;background:rgba(255,255,255,.08);border-radius:99px;margin-top:5px;overflow:hidden;}
+.s-bar-fill{height:100%;border-radius:99px;transition:width .5s ease;}
+
+.mc-chart{padding:0 18px 14px;}
+.mc-chart canvas{max-height:80px!important;}
+
+.mc-footer{padding:10px 18px;border-top:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;background:rgba(0,0,0,.15);}
+.mc-uptime{font-family:var(--font-mono);font-size:.68rem;color:var(--txt3);}
+.mc-btn{padding:5px 14px;border-radius:5px;border:1px solid var(--bdr2);background:transparent;color:var(--blue);font-size:.72rem;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.5px;}
+.mc-btn:hover{background:rgba(0,180,255,.15);}
+
+/* ═══════════════════════════════════════════
+   SMART ALERTS
+═══════════════════════════════════════════ */
+.alert-toolbar{display:flex;align-items:center;gap:12px;margin-bottom:20px;flex-wrap:wrap;}
+.alert-filter{padding:7px 16px;border-radius:6px;border:1px solid var(--bdr);background:var(--panel);color:var(--txt2);font-size:.8rem;font-weight:600;cursor:pointer;transition:all .2s;}
+.alert-filter.active{background:rgba(0,180,255,.15);border-color:var(--bdr3);color:var(--blue);}
+.alert-filter:hover{border-color:var(--bdr2);}
+.alert-count{font-family:var(--font-mono);font-size:.72rem;color:var(--txt3);margin-left:auto;}
+
+.alert-list{display:flex;flex-direction:column;gap:10px;}
+.alert-item{background:var(--panel);border:1px solid var(--bdr);border-radius:10px;padding:16px 20px;
+  position:relative;overflow:hidden;transition:all .3s;animation:slideIn .4s ease both;}
+@keyframes slideIn{from{opacity:0;transform:translateX(-10px);}to{opacity:1;transform:none;}}
+.alert-item::before{content:'';position:absolute;left:0;top:0;bottom:0;width:3px;}
+.alert-item.crit{border-color:rgba(255,34,68,.4);}
+.alert-item.crit::before{background:var(--red);}
+.alert-item.warn{border-color:rgba(255,204,0,.35);}
+.alert-item.warn::before{background:var(--yellow);}
+.alert-item.info{border-color:rgba(0,180,255,.3);}
+.alert-item.info::before{background:var(--blue);}
+.alert-item.resolved{opacity:.5;}
+.alert-header{display:flex;align-items:flex-start;gap:12px;margin-bottom:8px;}
+.alert-badge{padding:3px 10px;border-radius:99px;font-size:.65rem;font-weight:700;letter-spacing:1px;text-transform:uppercase;flex-shrink:0;}
+.badge-crit{background:rgba(255,34,68,.2);color:var(--red);border:1px solid rgba(255,34,68,.3);}
+.badge-warn{background:rgba(255,204,0,.15);color:var(--yellow);border:1px solid rgba(255,204,0,.3);}
+.badge-info{background:rgba(0,180,255,.12);color:var(--blue);border:1px solid rgba(0,180,255,.25);}
+.badge-ok{background:rgba(0,255,136,.12);color:var(--green);border:1px solid rgba(0,255,136,.25);}
+.alert-title{font-weight:700;font-size:.95rem;flex:1;}
+.alert-count-badge{background:rgba(255,136,0,.15);color:var(--orange);border:1px solid rgba(255,136,0,.25);padding:3px 10px;border-radius:99px;font-size:.65rem;font-weight:700;font-family:var(--font-mono);}
+.alert-time{font-family:var(--font-mono);font-size:.68rem;color:var(--txt3);margin-left:auto;flex-shrink:0;}
+.alert-desc{font-size:.85rem;color:var(--txt2);margin-bottom:10px;line-height:1.5;}
+.alert-ai{display:flex;gap:8px;align-items:flex-start;background:rgba(153,102,255,.08);border:1px solid rgba(153,102,255,.2);border-radius:7px;padding:10px 12px;margin-bottom:10px;}
+.ai-icon{color:var(--purple);font-size:1rem;flex-shrink:0;margin-top:1px;}
+.alert-ai-txt{font-size:.82rem;color:rgba(200,180,255,.9);line-height:1.5;}
+.alert-ai-txt strong{color:var(--purple);}
+.alert-actions{display:flex;gap:8px;}
+.alert-btn{padding:5px 14px;border-radius:5px;font-size:.75rem;font-weight:600;cursor:pointer;transition:all .2s;border:1px solid;letter-spacing:.3px;}
+.alert-btn.ack{border-color:rgba(0,180,255,.3);background:rgba(0,180,255,.08);color:var(--blue);}
+.alert-btn.ack:hover{background:rgba(0,180,255,.2);}
+.alert-btn.resolve{border-color:rgba(0,255,136,.3);background:rgba(0,255,136,.08);color:var(--green);}
+.alert-btn.resolve:hover{background:rgba(0,255,136,.2);}
+.alert-btn.escalate{border-color:rgba(255,34,68,.3);background:rgba(255,34,68,.08);color:var(--red);}
+.alert-btn.escalate:hover{background:rgba(255,34,68,.2);}
+
+/* ═══════════════════════════════════════════
+   ANALYTICS
+═══════════════════════════════════════════ */
+.analytics-grid{display:grid;grid-template-columns:2fr 1fr;gap:18px;margin-bottom:18px;}
+.chart-card{background:var(--panel);border:1px solid var(--bdr);border-radius:12px;padding:20px;}
+.cc-title{font-family:var(--font-display);font-size:.82rem;font-weight:700;letter-spacing:1px;margin-bottom:16px;color:var(--blue);}
+.analytics-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:18px;}
+
+/* ═══════════════════════════════════════════
+   ROLE BASED VIEW
+═══════════════════════════════════════════ */
+.role-switcher{display:flex;gap:8px;margin-bottom:24px;}
+.role-btn{padding:10px 24px;border-radius:8px;border:1px solid var(--bdr);background:var(--panel);
+  color:var(--txt2);font-size:.88rem;font-weight:600;cursor:pointer;transition:all .2s;letter-spacing:.5px;}
+.role-btn.active{border-color:var(--bdr3);background:rgba(0,180,255,.12);color:var(--blue);}
+.role-btn:hover{border-color:var(--bdr2);}
+.role-view{display:none;}
+.role-view.active{display:block;animation:pageIn .3s ease;}
+.role-header{font-family:var(--font-display);font-size:1.1rem;font-weight:700;letter-spacing:1px;margin-bottom:6px;}
+.role-desc{font-size:.85rem;color:var(--txt3);margin-bottom:20px;font-family:var(--font-mono);}
+.info-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:14px;margin-bottom:20px;}
+.info-card{background:var(--panel);border:1px solid var(--bdr);border-radius:10px;padding:16px;}
+.ic-label{font-size:.68rem;color:var(--txt3);text-transform:uppercase;letter-spacing:2px;font-family:var(--font-mono);margin-bottom:6px;}
+.ic-value{font-family:var(--font-display);font-size:1.4rem;font-weight:700;color:var(--teal);}
+.ic-sub{font-size:.75rem;color:var(--txt3);margin-top:3px;}
+
+/* KPI bars */
+.kpi-list{display:flex;flex-direction:column;gap:12px;}
+.kpi-item{display:flex;flex-direction:column;gap:5px;}
+.kpi-meta{display:flex;justify-content:space-between;font-size:.8rem;}
+.kpi-name{color:var(--txt2);}
+.kpi-pct{color:var(--blue);font-family:var(--font-mono);}
+.kpi-track{height:5px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden;}
+.kpi-fill{height:100%;border-radius:99px;background:linear-gradient(90deg,var(--blue2),var(--blue),var(--teal));transition:width 1s ease;}
+
+/* ═══════════════════════════════════════════
+   EMERGENCY MODE
+═══════════════════════════════════════════ */
+#emergency-overlay{
+  display:none;position:fixed;inset:0;z-index:200;
+  background:rgba(0,0,0,.95);backdrop-filter:blur(8px);
+  flex-direction:column;align-items:center;justify-content:center;gap:24px;
+}
+#emergency-overlay.active{display:flex;}
+.emg-header{font-family:var(--font-display);font-size:clamp(1.8rem,4vw,3rem);font-weight:900;letter-spacing:4px;
+  color:var(--red);text-align:center;
+  animation:emgFlash 1s ease infinite alternate;}
+@keyframes emgFlash{from{text-shadow:0 0 20px rgba(255,34,68,.5);}to{text-shadow:0 0 60px rgba(255,34,68,1),0 0 120px rgba(255,34,68,.4);}}
+.emg-sub{font-family:var(--font-mono);font-size:.9rem;color:rgba(255,100,100,.8);text-align:center;letter-spacing:2px;}
+.emg-card{background:rgba(255,34,68,.07);border:2px solid rgba(255,34,68,.5);border-radius:16px;padding:32px 40px;max-width:600px;width:90%;text-align:center;}
+.emg-machine{font-family:var(--font-display);font-size:1.1rem;color:var(--red);margin-bottom:8px;}
+.emg-issue{font-size:.95rem;color:var(--txt2);margin-bottom:20px;line-height:1.6;}
+.emg-actions{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;}
+.emg-btn{padding:12px 28px;border-radius:8px;font-size:.88rem;font-weight:700;cursor:pointer;transition:all .2s;letter-spacing:1px;border:1px solid;}
+.emg-btn.shutdown{border-color:var(--red);background:rgba(255,34,68,.15);color:var(--red);}
+.emg-btn.shutdown:hover{background:rgba(255,34,68,.35);}
+.emg-btn.isolate{border-color:var(--orange);background:rgba(255,136,0,.15);color:var(--orange);}
+.emg-btn.isolate:hover{background:rgba(255,136,0,.3);}
+.emg-btn.dismiss{border-color:var(--bdr);background:var(--panel);color:var(--txt2);}
+.emg-btn.dismiss:hover{background:var(--panel2);}
+.emg-steps{display:flex;flex-direction:column;gap:8px;margin-bottom:20px;text-align:left;}
+.emg-step{display:flex;gap:10px;align-items:flex-start;font-size:.85rem;color:var(--txt2);}
+.emg-step-num{width:22px;height:22px;border-radius:50%;background:rgba(255,34,68,.2);border:1px solid rgba(255,34,68,.4);color:var(--red);display:flex;align-items:center;justify-content:center;font-size:.72rem;font-weight:700;flex-shrink:0;}
+
+/* ═══════════════════════════════════════════
+   FOCUS MODE
+═══════════════════════════════════════════ */
+#focus-overlay{
+  display:none;position:fixed;inset:0;z-index:150;background:rgba(0,0,0,.88);backdrop-filter:blur(4px);
+  align-items:center;justify-content:center;padding:24px;
+}
+#focus-overlay.active{display:flex;}
+.focus-card{background:var(--panel2);border:1px solid rgba(255,34,68,.5);border-radius:16px;
+  max-width:700px;width:100%;max-height:90vh;overflow-y:auto;
+  box-shadow:0 0 80px rgba(255,34,68,.2);}
+.focus-header{padding:20px 24px;border-bottom:1px solid var(--bdr);display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.focus-title{font-family:var(--font-display);font-size:1rem;font-weight:700;color:var(--red);}
+.focus-header-btns{display:flex;gap:8px;flex-shrink:0;}
+.focus-newtab{background:none;border:1px solid var(--bdr2);color:var(--blue);padding:5px 12px;border-radius:5px;cursor:pointer;transition:all .2s;font-size:.75rem;font-weight:600;}
+.focus-newtab:hover{background:rgba(0,180,255,.15);}
+.focus-close{background:none;border:1px solid var(--bdr);color:var(--txt2);padding:5px 14px;border-radius:5px;cursor:pointer;transition:all .2s;font-size:.82rem;}
+.focus-close:hover{border-color:var(--bdr3);color:var(--blue);}
+.focus-body{padding:24px;}
+.focus-sensors{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px;}
+.focus-chart{margin-bottom:20px;}
+.focus-actions h4{font-size:.8rem;color:var(--txt3);text-transform:uppercase;letter-spacing:2px;margin-bottom:10px;font-family:var(--font-mono);}
+.action-list{display:flex;flex-direction:column;gap:8px;}
+.action-item{display:flex;gap:10px;align-items:flex-start;font-size:.85rem;color:var(--txt2);padding:8px 12px;background:rgba(255,255,255,.03);border:1px solid var(--bdr);border-radius:7px;}
+.action-item::before{content:'→';color:var(--teal);font-weight:700;margin-top:1px;flex-shrink:0;}
+
+/* ═══════════════════════════════════════════
+   ROLE MODAL
+═══════════════════════════════════════════ */
+#role-modal{display:none;position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.85);backdrop-filter:blur(8px);align-items:center;justify-content:center;}
+#role-modal.active{display:flex;}
+.rm-card{background:var(--panel2);border:1px solid var(--bdr2);border-radius:16px;padding:32px;width:320px;}
+.rm-title{font-family:var(--font-display);font-size:1rem;font-weight:700;margin-bottom:6px;color:var(--blue);}
+.rm-sub{font-size:.8rem;color:var(--txt3);font-family:var(--font-mono);margin-bottom:20px;}
+.rm-options{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.rm-opt{padding:12px 16px;border-radius:8px;border:1px solid var(--bdr);background:var(--panel);cursor:pointer;transition:all .2s;}
+.rm-opt:hover{border-color:var(--bdr3);background:rgba(0,180,255,.1);}
+.rm-opt.selected{border-color:var(--bdr3);background:rgba(0,180,255,.12);}
+.rm-opt-name{font-weight:700;font-size:.9rem;color:var(--blue);}
+.rm-opt-desc{font-size:.75rem;color:var(--txt3);margin-top:2px;}
+.rm-confirm{width:100%;padding:10px;border-radius:8px;background:linear-gradient(135deg,var(--blue2),var(--blue));border:none;color:#fff;font-size:.88rem;font-weight:700;cursor:pointer;letter-spacing:.5px;transition:all .2s;}
+.rm-confirm:hover{opacity:.9;transform:translateY(-1px);}
+
+/* ═══════════════════════════════════════════
+   UTILITY
+═══════════════════════════════════════════ */
+.tag{display:inline-block;padding:3px 10px;border-radius:99px;font-size:.68rem;font-weight:600;letter-spacing:.5px;text-transform:uppercase;}
+.tag-blue{background:rgba(0,180,255,.12);color:var(--blue);border:1px solid rgba(0,180,255,.25);}
+.tag-green{background:rgba(0,255,136,.1);color:var(--green);border:1px solid rgba(0,255,136,.22);}
+.tag-red{background:rgba(255,34,68,.12);color:var(--red);border:1px solid rgba(255,34,68,.25);}
+.tag-yellow{background:rgba(255,204,0,.1);color:var(--yellow);border:1px solid rgba(255,204,0,.22);}
+
+.divider{height:1px;background:var(--bdr);margin:20px 0;}
+.section-hdr{font-family:var(--font-display);font-size:.82rem;font-weight:700;letter-spacing:2px;color:var(--txt3);text-transform:uppercase;margin-bottom:14px;display:flex;align-items:center;gap:10px;}
+.section-hdr::after{content:'';flex:1;height:1px;background:var(--bdr);}
+
+.btn-primary{padding:9px 22px;border-radius:7px;background:linear-gradient(135deg,var(--blue2),var(--blue));border:none;color:#fff;font-size:.85rem;font-weight:700;cursor:pointer;letter-spacing:.5px;transition:all .2s;}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 4px 20px rgba(0,180,255,.3);}
+.btn-sec{padding:9px 22px;border-radius:7px;background:transparent;border:1px solid var(--bdr2);color:var(--blue);font-size:.85rem;font-weight:600;cursor:pointer;letter-spacing:.5px;transition:all .2s;}
+.btn-sec:hover{background:rgba(0,180,255,.1);}
+
+/* ═══════════════════════════════════════════
+   ADD MACHINE PANEL
+═══════════════════════════════════════════ */
+.add-machine-bar{display:flex;align-items:center;gap:12px;margin-bottom:20px;background:var(--panel);border:1px solid var(--bdr);border-radius:10px;padding:14px 18px;}
+.add-machine-bar input,.add-machine-bar select{background:rgba(0,0,0,.3);border:1px solid var(--bdr);border-radius:6px;color:var(--txt);padding:7px 12px;font-size:.85rem;flex:1;}
+.add-machine-bar input:focus,.add-machine-bar select:focus{outline:none;border-color:var(--bdr3);}
+
+/* ── NEW TAB TOAST ── */
+#newtab-toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(60px);
+  background:rgba(0,180,255,.15);border:1px solid var(--bdr3);
+  color:var(--blue);padding:10px 20px;border-radius:8px;
+  font-family:var(--font-mono);font-size:.78rem;
+  transition:transform .3s ease,opacity .3s ease;opacity:0;z-index:300;
+  pointer-events:none;white-space:nowrap;
+}
+#newtab-toast.show{transform:translateX(-50%) translateY(0);opacity:1;}
+
+/* ═══════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════ */
+@media(max-width:900px){
+  .stat-grid{grid-template-columns:repeat(2,1fr);}
+  .analytics-grid{grid-template-columns:1fr;}
+  .analytics-row{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:640px){
+  :root{--sidebar:0px;}
+  #sidebar{transform:translateX(-260px);}
+  #sidebar.open{transform:none;}
+  #main{margin-left:0;}
+  .stat-grid{grid-template-columns:1fr 1fr;}
+  .machine-grid{grid-template-columns:1fr;}
+  .analytics-row{grid-template-columns:1fr;}
+  #mobile-toggle{display:flex;}
+}
+#mobile-toggle{display:none;position:fixed;bottom:20px;right:20px;z-index:60;width:48px;height:48px;border-radius:50%;background:linear-gradient(135deg,var(--blue2),var(--blue));border:none;color:#fff;font-size:1.2rem;cursor:pointer;align-items:center;justify-content:center;box-shadow:0 4px 20px rgba(0,180,255,.4);}
+</style>
+</head>
+<body>
+
+<div id="app">
+<!-- ═══════════════ SIDEBAR ═══════════════ -->
+<aside id="sidebar">
+  <div class="sb-logo">
+    <div class="sb-logo-txt">NEXUS HMI</div>
+    <div class="sb-logo-sub">AI Industrial Control v2.4</div>
+  </div>
+  <div class="sb-status">SYS ONLINE — ALL NODES</div>
+
+  <nav class="sb-nav">
+    <div class="sb-section">Control</div>
+
+    <div class="sb-item-wrap">
+      <div class="sb-item active" onclick="showPage('dashboard')">
+        <svg class="sb-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"/></svg>
+        Dashboard
+      </div>
+      <button class="sb-newtab" onclick="openPageInNewTab('dashboard')" title="Open in new tab">↗ new tab</button>
+    </div>
+
+    <div class="sb-item-wrap">
+      <div class="sb-item" onclick="showPage('monitoring')">
+        <svg class="sb-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+        Live Monitoring
+      </div>
+      <button class="sb-newtab" onclick="openPageInNewTab('monitoring')" title="Open in new tab">↗ new tab</button>
+    </div>
+
+    <div class="sb-item-wrap">
+      <div class="sb-item" onclick="showPage('alerts')">
+        <svg class="sb-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"/></svg>
+        Smart Alerts
+        <span class="sb-badge" id="alert-count-badge">3</span>
+      </div>
+      <button class="sb-newtab" onclick="openPageInNewTab('alerts')" title="Open in new tab">↗ new tab</button>
+    </div>
+
+    <div class="sb-item-wrap">
+      <div class="sb-item" onclick="showPage('analytics')">
+        <svg class="sb-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z"/></svg>
+        Analytics
+      </div>
+      <button class="sb-newtab" onclick="openPageInNewTab('analytics')" title="Open in new tab">↗ new tab</button>
+    </div>
+
+    <div class="sb-section">Views</div>
+
+    <div class="sb-item-wrap">
+      <div class="sb-item" onclick="showPage('roles')">
+        <svg class="sb-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0z"/></svg>
+        Role-Based View
+      </div>
+      <button class="sb-newtab" onclick="openPageInNewTab('roles')" title="Open in new tab">↗ new tab</button>
+    </div>
+
+    <div class="sb-item-wrap">
+      <div class="sb-item" onclick="triggerEmergency()">
+        <svg class="sb-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"/></svg>
+        Emergency Mode
+        <span class="sb-badge" style="background:rgba(255,34,68,.2);color:var(--red);border:1px solid rgba(255,34,68,.3);">!</span>
+      </div>
+    </div>
+  </nav>
+  <div class="sb-bottom">
+    <div class="sb-time" id="sb-time">--:--:--</div>
+    <div class="sb-date" id="sb-date">Loading...</div>
+  </div>
+</aside>
+
+<!-- ═══════════════ MAIN ═══════════════ -->
+<div id="main">
+  <!-- TOPBAR -->
+  <div id="topbar">
+    <div class="tb-title" id="tb-title">SYSTEM DASHBOARD</div>
+    <div class="tb-right">
+      <div class="tb-health">
+        <span style="font-family:var(--font-mono);font-size:.7rem;color:var(--txt3)">PLANT HEALTH</span>
+        <div class="health-bar"><div class="health-fill" id="health-fill" style="width:87%"></div></div>
+        <span id="health-pct" style="color:var(--green);font-weight:700;">87%</span>
+      </div>
+      <div class="tag tag-blue" id="role-tag">OPERATOR</div>
+      <button class="tb-newtab-hint" id="tb-newtab-btn" onclick="openCurrentPageInNewTab()">↗ Open in new tab</button>
+      <button class="tb-role-btn" onclick="openRoleModal()">⚙ Switch Role</button>
+      <button class="tb-emergency" onclick="triggerEmergency()">⚠ EMERGENCY</button>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: DASHBOARD ═══ -->
+  <div class="page active" id="page-dashboard">
+    <div class="ph">
+      <div>
+        <div class="ph-title">System Overview</div>
+        <div class="ph-sub">Real-time industrial plant monitoring — All systems nominal</div>
+      </div>
+      <div style="display:flex;gap:10px;">
+        <button class="btn-sec" onclick="showPage('monitoring')">Live View</button>
+        <button class="btn-primary" onclick="showPage('alerts')">View Alerts</button>
+      </div>
+    </div>
+
+    <div class="stat-grid">
+      <div class="stat-card blue">
+        <div class="sc-label">Active Machines</div>
+        <div class="sc-value blue" id="active-machines">6</div>
+        <div class="sc-sub">of 8 total units</div>
+        <div class="sc-trend up">↑ All operational</div>
+        <div class="sc-icon">⚙</div>
+      </div>
+      <div class="stat-card red">
+        <div class="sc-label">Total Alerts</div>
+        <div class="sc-value red" id="total-alerts">3</div>
+        <div class="sc-sub">2 critical, 1 warning</div>
+        <div class="sc-trend dn">↑ Requires attention</div>
+        <div class="sc-icon">⚠</div>
+      </div>
+      <div class="stat-card green">
+        <div class="sc-label">Plant Health</div>
+        <div class="sc-value green">87%</div>
+        <div class="sc-sub">Normal range: >80%</div>
+        <div class="sc-trend up">↑ Stable</div>
+        <div class="sc-icon">♻</div>
+      </div>
+      <div class="stat-card amber">
+        <div class="sc-label">Production Rate</div>
+        <div class="sc-value amber" id="prod-rate">94%</div>
+        <div class="sc-sub">Efficiency index</div>
+        <div class="sc-trend up">↑ Above target</div>
+        <div class="sc-icon">📊</div>
+      </div>
+    </div>
+
+    <div class="section-hdr">Machine Status Overview</div>
+    <div id="dashboard-mini-grid" class="machine-grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr));"></div>
+
+    <div class="divider"></div>
+    <div class="section-hdr">Recent Activity</div>
+    <div id="activity-feed" style="display:flex;flex-direction:column;gap:8px;"></div>
+  </div>
+
+  <!-- ═══ PAGE: MONITORING ═══ -->
+  <div class="page" id="page-monitoring">
+    <div class="ph">
+      <div>
+        <div class="ph-title">Live Monitoring</div>
+        <div class="ph-sub">Real-time sensor data from all active machines</div>
+      </div>
+    </div>
+
+    <div class="add-machine-bar">
+      <span style="font-family:var(--font-mono);font-size:.78rem;color:var(--txt3);white-space:nowrap;">+ AUTO-GEN MACHINE</span>
+      <input type="text" id="new-machine-name" placeholder="Machine name (e.g. Compressor C)" style="min-width:160px;"/>
+      <select id="new-machine-type">
+        <option value="compressor">Compressor</option>
+        <option value="pump">Pump</option>
+        <option value="motor">Motor</option>
+        <option value="reactor">Reactor</option>
+        <option value="turbine">Turbine</option>
+      </select>
+      <button class="btn-primary" onclick="addNewMachine()">Generate Card</button>
+    </div>
+
+    <div class="machine-grid" id="machine-grid"></div>
+  </div>
+
+  <!-- ═══ PAGE: ALERTS ═══ -->
+  <div class="page" id="page-alerts">
+    <div class="ph">
+      <div>
+        <div class="ph-title">Smart Alert System</div>
+        <div class="ph-sub">AI-prioritized alerts with intelligent grouping & suggestions</div>
+      </div>
+      <button class="btn-primary" onclick="clearResolved()">Clear Resolved</button>
+    </div>
+
+    <div class="alert-toolbar">
+      <button class="alert-filter active" onclick="filterAlerts('all',this)">All</button>
+      <button class="alert-filter" onclick="filterAlerts('crit',this)">Critical</button>
+      <button class="alert-filter" onclick="filterAlerts('warn',this)">Warning</button>
+      <button class="alert-filter" onclick="filterAlerts('info',this)">Info</button>
+      <button class="alert-filter" onclick="filterAlerts('resolved',this)">Resolved</button>
+      <span class="alert-count" id="alert-filter-count">Showing 3 alerts</span>
+    </div>
+    <div class="alert-list" id="alert-list"></div>
+  </div>
+
+  <!-- ═══ PAGE: ANALYTICS ═══ -->
+  <div class="page" id="page-analytics">
+    <div class="ph">
+      <div>
+        <div class="ph-title">Analytics & Insights</div>
+        <div class="ph-sub">Historical trends and performance metrics</div>
+      </div>
+    </div>
+
+    <div class="analytics-grid">
+      <div class="chart-card">
+        <div class="cc-title">PLANT-WIDE TEMPERATURE TREND (24H)</div>
+        <canvas id="analytics-temp-chart"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">ALERT DISTRIBUTION</div>
+        <canvas id="analytics-pie-chart"></canvas>
+      </div>
+    </div>
+
+    <div class="analytics-row">
+      <div class="chart-card">
+        <div class="cc-title">VIBRATION LEVELS</div>
+        <canvas id="analytics-vib-chart"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">PRESSURE TREND</div>
+        <canvas id="analytics-press-chart"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">PRODUCTION EFFICIENCY</div>
+        <canvas id="analytics-eff-chart"></canvas>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ PAGE: ROLES ═══ -->
+  <div class="page" id="page-roles">
+    <div class="ph">
+      <div>
+        <div class="ph-title">Role-Based Interface</div>
+        <div class="ph-sub">Context-aware views tailored per user role</div>
+      </div>
+    </div>
+    <div class="role-switcher">
+      <button class="role-btn active" onclick="switchRoleView('operator',this)">Operator</button>
+      <button class="role-btn" onclick="switchRoleView('engineer',this)">Engineer</button>
+      <button class="role-btn" onclick="switchRoleView('manager',this)">Manager</button>
+    </div>
+
+    <!-- OPERATOR VIEW -->
+    <div class="role-view active" id="role-operator">
+      <div class="role-header">Operator Dashboard</div>
+      <div class="role-desc">Simplified controls and critical alerts only</div>
+      <div class="info-grid">
+        <div class="info-card"><div class="ic-label">Active Alerts</div><div class="ic-value" style="color:var(--red)">3</div><div class="ic-sub">Requires action</div></div>
+        <div class="info-card"><div class="ic-label">Machines Running</div><div class="ic-value">6/8</div><div class="ic-sub">Normal range</div></div>
+        <div class="info-card"><div class="ic-label">Shift Health</div><div class="ic-value">87%</div><div class="ic-sub">Good standing</div></div>
+        <div class="info-card"><div class="ic-label">Next Maintenance</div><div class="ic-value" style="color:var(--yellow)">2h</div><div class="ic-sub">Pump B scheduled</div></div>
+      </div>
+      <div class="section-hdr">Quick Actions</div>
+      <div style="display:flex;gap:10px;flex-wrap:wrap;">
+        <button class="btn-primary" onclick="showPage('alerts')">View Critical Alerts</button>
+        <button class="btn-sec" onclick="showPage('monitoring')">Check Machines</button>
+        <button class="emg-btn shutdown" style="font-size:.82rem;padding:9px 18px;" onclick="triggerEmergency()">Emergency Stop</button>
+      </div>
+    </div>
+
+    <!-- ENGINEER VIEW -->
+    <div class="role-view" id="role-engineer">
+      <div class="role-header">Engineer Diagnostics Panel</div>
+      <div class="role-desc">Detailed sensor analytics and machine diagnostics</div>
+      <div class="section-hdr">System KPIs</div>
+      <div class="kpi-list" style="max-width:500px;margin-bottom:24px;">
+        <div class="kpi-item"><div class="kpi-meta"><span class="kpi-name">Cooling System Efficiency</span><span class="kpi-pct">72%</span></div><div class="kpi-track"><div class="kpi-fill" style="width:72%;background:linear-gradient(90deg,var(--orange),var(--yellow));"></div></div></div>
+        <div class="kpi-item"><div class="kpi-meta"><span class="kpi-name">Motor A Performance</span><span class="kpi-pct">91%</span></div><div class="kpi-track"><div class="kpi-fill" style="width:91%;"></div></div></div>
+        <div class="kpi-item"><div class="kpi-meta"><span class="kpi-name">Pump B Vibration Health</span><span class="kpi-pct">55%</span></div><div class="kpi-track"><div class="kpi-fill" style="width:55%;background:linear-gradient(90deg,var(--red),var(--orange));"></div></div></div>
+        <div class="kpi-item"><div class="kpi-meta"><span class="kpi-name">Reactor Pressure Stability</span><span class="kpi-pct">88%</span></div><div class="kpi-track"><div class="kpi-fill" style="width:88%;"></div></div></div>
+        <div class="kpi-item"><div class="kpi-meta"><span class="kpi-name">Gas Sensor Calibration</span><span class="kpi-pct">96%</span></div><div class="kpi-track"><div class="kpi-fill" style="width:96%;"></div></div></div>
+      </div>
+      <div class="chart-card" style="margin-bottom:16px;">
+        <div class="cc-title">MULTI-SENSOR CORRELATION (LAST 1H)</div>
+        <canvas id="eng-chart" style="max-height:180px;"></canvas>
+      </div>
+      <div class="section-hdr">Diagnostic Notes</div>
+      <div style="background:var(--panel);border:1px solid rgba(153,102,255,.25);border-radius:10px;padding:16px 20px;font-size:.85rem;color:var(--txt2);line-height:1.7;">
+        <span style="color:var(--purple);font-weight:700;">⚡ AI Diagnosis:</span> Pump B showing abnormal vibration pattern (2.8 mm/s, threshold: 2.0). Correlated high temperature (78°C) suggests bearing wear or impeller imbalance. Recommend scheduled inspection within next 4 hours. Cross-referencing with pressure drop data: 0.8 bar loss detected upstream.
+      </div>
+    </div>
+
+    <!-- MANAGER VIEW -->
+    <div class="role-view" id="role-manager">
+      <div class="role-header">Management Overview</div>
+      <div class="role-desc">Production efficiency and system performance reports</div>
+      <div class="info-grid">
+        <div class="info-card"><div class="ic-label">Today's Output</div><div class="ic-value">2,847</div><div class="ic-sub">Units produced</div></div>
+        <div class="info-card"><div class="ic-label">Efficiency Index</div><div class="ic-value">94%</div><div class="ic-sub">Above 90% target</div></div>
+        <div class="info-card"><div class="ic-label">Downtime Today</div><div class="ic-value" style="color:var(--yellow)">38m</div><div class="ic-sub">Planned: 30m</div></div>
+        <div class="info-card"><div class="ic-label">Energy Usage</div><div class="ic-value" style="color:var(--teal)">4.2MW</div><div class="ic-sub">Within budget</div></div>
+        <div class="info-card"><div class="ic-label">Safety Score</div><div class="ic-value" style="color:var(--green)">A+</div><div class="ic-sub">No incidents</div></div>
+        <div class="info-card"><div class="ic-label">Alerts Resolved</div><div class="ic-value">12</div><div class="ic-sub">This shift</div></div>
+      </div>
+      <div class="chart-card">
+        <div class="cc-title">WEEKLY PRODUCTION TREND</div>
+        <canvas id="mgr-chart" style="max-height:160px;"></canvas>
+      </div>
+    </div>
+  </div>
+</div><!-- /#main -->
+</div><!-- /#app -->
+
+<!-- ═══════════════ EMERGENCY OVERLAY ═══════════════ -->
+<div id="emergency-overlay">
+  <div class="emg-header">⚠ EMERGENCY MODE ACTIVATED ⚠</div>
+  <div class="emg-sub" id="emg-sub">CRITICAL SYSTEM FAILURE DETECTED — IMMEDIATE ACTION REQUIRED</div>
+  <div class="emg-card">
+    <div class="emg-machine" id="emg-machine">PUMP B — UNIT PMP-002</div>
+    <div class="emg-issue" id="emg-issue">Critical vibration levels (3.2 mm/s) combined with high temperature (82°C) indicate imminent bearing failure. Abnormal pressure drop detected. Risk of catastrophic failure if not addressed.</div>
+    <div class="section-hdr" style="color:var(--red);border-bottom-color:rgba(255,34,68,.2);">RECOMMENDED ACTIONS</div>
+    <div class="emg-steps">
+      <div class="emg-step"><div class="emg-step-num">1</div>Immediately reduce load on Pump B to 30% capacity</div>
+      <div class="emg-step"><div class="emg-step-num">2</div>Switch to backup pump (PMP-003) in standby mode</div>
+      <div class="emg-step"><div class="emg-step-num">3</div>Notify maintenance team and plant supervisor</div>
+      <div class="emg-step"><div class="emg-step-num">4</div>Monitor temperature every 5 minutes — shutdown if >90°C</div>
+    </div>
+    <div class="emg-actions">
+      <button class="emg-btn shutdown" onclick="shutdownMachine()">⛔ EMERGENCY SHUTDOWN</button>
+      <button class="emg-btn isolate" onclick="isolateMachine()">⚠ ISOLATE UNIT</button>
+      <button class="emg-btn dismiss" onclick="dismissEmergency()">Acknowledge & Monitor</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ FOCUS MODE OVERLAY ═══════════════ -->
+<div id="focus-overlay">
+  <div class="focus-card" id="focus-card">
+    <div class="focus-header">
+      <div class="focus-title">🔴 ADAPTIVE FOCUS MODE — <span id="focus-machine-name">PUMP B</span></div>
+      <div class="focus-header-btns">
+        <button class="focus-newtab" onclick="openFocusInNewTab()">↗ New tab</button>
+        <button class="focus-close" onclick="closeFocus()">✕ Close</button>
+      </div>
+    </div>
+    <div class="focus-body">
+      <div class="focus-sensors" id="focus-sensors"></div>
+      <div class="focus-chart">
+        <div class="cc-title">REAL-TIME SENSOR TRENDS</div>
+        <canvas id="focus-chart" style="max-height:140px;"></canvas>
+      </div>
+      <div class="focus-actions">
+        <h4>Recommended Actions</h4>
+        <div class="action-list" id="focus-actions-list"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ ROLE MODAL ═══════════════ -->
+<div id="role-modal">
+  <div class="rm-card">
+    <div class="rm-title">Switch User Role</div>
+    <div class="rm-sub">Select your access level for this session</div>
+    <div class="rm-options">
+      <div class="rm-opt selected" onclick="selectRole('operator',this)">
+        <div class="rm-opt-name">Operator</div>
+        <div class="rm-opt-desc">Simplified controls, critical alerts only</div>
+      </div>
+      <div class="rm-opt" onclick="selectRole('engineer',this)">
+        <div class="rm-opt-name">Engineer</div>
+        <div class="rm-opt-desc">Full sensor data, diagnostics, analytics</div>
+      </div>
+      <div class="rm-opt" onclick="selectRole('manager',this)">
+        <div class="rm-opt-name">Manager</div>
+        <div class="rm-opt-desc">Production reports, efficiency metrics</div>
+      </div>
+    </div>
+    <button class="rm-confirm" onclick="confirmRole()">Confirm Role</button>
+    <button class="btn-sec" style="width:100%;margin-top:8px;" onclick="document.getElementById('role-modal').classList.remove('active')">Cancel</button>
+  </div>
+</div>
+
+<!-- ═══════════════ NEW TAB TOAST ═══════════════ -->
+<div id="newtab-toast">✓ Opened in new tab</div>
+
+<button id="mobile-toggle" onclick="document.getElementById('sidebar').classList.toggle('open')">☰</button>
+
+<script>
+/* ═══════════════════════════════════════════
+   NEW TAB: AUTO-NAVIGATE ON LOAD
+   If this tab was opened via openPageInNewTab(),
+   sessionStorage will have the target page.
+═══════════════════════════════════════════ */
+(function() {
+  const savedPage = sessionStorage.getItem('nexus-open-page');
+  if (savedPage) {
+    sessionStorage.removeItem('nexus-open-page');
+    // We'll call showPage after init, store for later
+    window._autoNavPage = savedPage;
+  }
+  const savedMachine = sessionStorage.getItem('nexus-open-machine');
+  if (savedMachine) {
+    sessionStorage.removeItem('nexus-open-machine');
+    window._autoNavMachine = savedMachine;
+  }
+})();
+
+/* ═══════════════════════════════════════════
+   DATA MODEL
+═══════════════════════════════════════════ */
+let machines = [
+  { id:'MTR-001', name:'Motor A',    type:'Motor',      status:'ok',       uptime:'99.2%', temp:62,  gas:12,  vib:0.8, pres:4.2 },
+  { id:'PMP-002', name:'Pump B',     type:'Pump',       status:'critical', uptime:'97.1%', temp:82,  gas:18,  vib:3.2, pres:3.4 },
+  { id:'RCT-003', name:'Reactor C',  type:'Reactor',    status:'warn',     uptime:'98.8%', temp:74,  gas:28,  vib:1.4, pres:6.8 },
+  { id:'CMP-004', name:'Compressor D',type:'Compressor',status:'ok',       uptime:'99.8%', temp:55,  gas:9,   vib:1.1, pres:8.2 },
+  { id:'HX-005',  name:'Heat Exchanger E',type:'HX',    status:'ok',       uptime:'100%',  temp:48,  gas:6,   vib:0.5, pres:3.1 },
+  { id:'TRB-006', name:'Turbine F',  type:'Turbine',    status:'ok',       uptime:'98.5%', temp:68,  gas:11,  vib:1.2, pres:9.4 },
+];
+
+let alerts = [
+  { id:1, type:'crit', title:'Cooling System Failure Detected', machine:'Pump B (PMP-002)', desc:'Abnormal temperature spike (82°C, threshold: 75°C) combined with high vibration detected. 17 related sensor anomalies grouped.', grouped:17, ai:'Possible bearing failure due to abnormal vibration (3.2 mm/s) and elevated temperature. Estimated time to failure: 2-4 hours without intervention.', time:'2 min ago', resolved:false },
+  { id:2, type:'crit', title:'Gas Concentration Above Safe Level', machine:'Reactor C (RCT-003)', desc:'Gas level reading 28 ppm (safe threshold: 25 ppm). Gradual increase over past 45 minutes detected.', grouped:5, ai:'Possible micro-leak in seal gasket P-4 based on rate of increase and pressure drop pattern. Recommend immediate seal inspection.', time:'15 min ago', resolved:false },
+  { id:3, type:'warn', title:'Pressure Fluctuation Detected', machine:'Reactor C (RCT-003)', desc:'Pressure variations of ±0.3 bar observed over last 30 minutes. Outside normal operating envelope.', grouped:3, ai:'Correlated with temperature gradient changes. May indicate valve response delay or pipe vibration coupling.', time:'32 min ago', resolved:false },
+  { id:4, type:'info', title:'Scheduled Maintenance Reminder', machine:'Pump B (PMP-002)', desc:'Routine maintenance window approaching in 2 hours as per maintenance schedule.', grouped:1, ai:null, time:'1 hr ago', resolved:false },
+];
+
+const historyLen = 30;
+let machineHistory = {};
+machines.forEach(m => {
+  machineHistory[m.id] = {
+    temp: Array.from({length:historyLen}, (_,i) => m.temp + (Math.random()-0.5)*6 - (historyLen-i)*0.1),
+    vib:  Array.from({length:historyLen}, (_,i) => m.vib + (Math.random()-0.5)*0.3),
+    pres: Array.from({length:historyLen}, (_,i) => m.pres + (Math.random()-0.5)*0.5),
+  };
+});
+
+let machineCharts = {};
+let analyticsCharts = {};
+let currentRole = 'operator';
+let selectedRole = 'operator';
+let alertFilter = 'all';
+let focusChart = null;
+let currentPage = 'dashboard';
+let currentFocusMachineId = null;
+
+/* ═══════════════════════════════════════════
+   NEW TAB FUNCTIONS
+═══════════════════════════════════════════ */
+function openPageInNewTab(page) {
+  sessionStorage.setItem('nexus-open-page', page);
+  window.open(location.href, '_blank');
+  showToast('Opened ' + page + ' in new tab');
+}
+
+function openCurrentPageInNewTab() {
+  openPageInNewTab(currentPage);
+}
+
+function openFocusInNewTab() {
+  if (!currentFocusMachineId) return;
+  sessionStorage.setItem('nexus-open-page', 'monitoring');
+  sessionStorage.setItem('nexus-open-machine', currentFocusMachineId);
+  window.open(location.href, '_blank');
+  showToast('Opened machine focus in new tab');
+}
+
+function showToast(msg) {
+  const t = document.getElementById('newtab-toast');
+  t.textContent = '✓ ' + msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2500);
+}
+
+/* ═══════════════════════════════════════════
+   CLOCK
+═══════════════════════════════════════════ */
+function updateClock() {
+  const now = new Date();
+  document.getElementById('sb-time').textContent = now.toLocaleTimeString('en-GB');
+  document.getElementById('sb-date').textContent = now.toLocaleDateString('en-GB',{weekday:'short',day:'2-digit',month:'short',year:'numeric'});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+/* ═══════════════════════════════════════════
+   PAGE NAVIGATION
+═══════════════════════════════════════════ */
+function showPage(page) {
+  currentPage = page;
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  const map={dashboard:'SYSTEM DASHBOARD',monitoring:'LIVE MONITORING',alerts:'SMART ALERTS',analytics:'ANALYTICS',roles:'ROLE-BASED VIEW'};
+  document.getElementById('tb-title').textContent = map[page]||page.toUpperCase();
+  const items = document.querySelectorAll('.sb-item');
+  const pageMap={dashboard:0,monitoring:1,alerts:2,analytics:3,roles:4};
+  if(pageMap[page]!==undefined) items[pageMap[page]].classList.add('active');
+  if(page==='analytics') setTimeout(buildAnalyticsCharts, 100);
+  if(page==='roles') setTimeout(buildRoleCharts, 100);
+}
+
+/* ═══════════════════════════════════════════
+   MACHINE CARD BUILDER
+═══════════════════════════════════════════ */
+function getSensorClass(val, warn, crit) {
+  if(val >= crit) return 'crit';
+  if(val >= warn) return 'warn';
+  return 'ok';
+}
+
+function buildBarFill(val, max, status) {
+  const pct = Math.min(100, (val/max)*100);
+  const col = status==='crit' ? 'var(--red)' : status==='warn' ? 'var(--yellow)' : 'var(--teal)';
+  return `<div class="s-bar"><div class="s-bar-fill" style="width:${pct}%;background:${col};"></div></div>`;
+}
+
+function buildMachineCard(m, mini=false) {
+  const ts = getSensorClass(m.temp, 70, 80);
+  const gs = getSensorClass(m.gas, 20, 30);
+  const vs = getSensorClass(m.vib, 1.5, 2.5);
+  const ps = getSensorClass(m.pres, 7, 9);
+  const statusLabel = {ok:'NORMAL',warn:'WARNING',critical:'CRITICAL'}[m.status];
+  const dotClass = m.status==='critical'?'crit': m.status==='warn'?'warn':'ok';
+  const chartId = `chart-${m.id}${mini?'-mini':''}`;
+
+  return `<div class="machine-card status-${m.status}" id="mc-${m.id}${mini?'-mini':''}" onclick="openFocus('${m.id}')">
+    <div class="mc-header">
+      <div>
+        <div class="mc-name">${m.name}</div>
+        <div class="mc-id">${m.id} · ${m.type}</div>
+      </div>
+      <div class="mc-status" style="color:${m.status==='ok'?'var(--green)':m.status==='warn'?'var(--yellow)':'var(--red)'}">
+        <div class="status-dot ${dotClass}"></div>${statusLabel}
+      </div>
+    </div>
+    <div class="mc-sensors">
+      <div class="sensor ${ts==='crit'?'alert':ts==='warn'?'warn':''}">
+        <div class="s-name">Temperature</div>
+        <div class="s-val ${ts}" id="sv-temp-${m.id}${mini?'-mini':''}">${m.temp}<span class="s-unit">°C</span></div>
+        ${buildBarFill(m.temp,100,ts)}
+      </div>
+      <div class="sensor ${gs==='crit'?'alert':gs==='warn'?'warn':''}">
+        <div class="s-name">Gas Level</div>
+        <div class="s-val ${gs}" id="sv-gas-${m.id}${mini?'-mini':''}">${m.gas}<span class="s-unit">ppm</span></div>
+        ${buildBarFill(m.gas,50,gs)}
+      </div>
+      <div class="sensor ${vs==='crit'?'alert':vs==='warn'?'warn':''}">
+        <div class="s-name">Vibration</div>
+        <div class="s-val ${vs}" id="sv-vib-${m.id}${mini?'-mini':''}">${m.vib.toFixed(1)}<span class="s-unit">mm/s</span></div>
+        ${buildBarFill(m.vib,5,vs)}
+      </div>
+      <div class="sensor ${ps==='crit'?'alert':ps==='warn'?'warn':''}">
+        <div class="s-name">Pressure</div>
+        <div class="s-val ${ps}" id="sv-pres-${m.id}${mini?'-mini':''}">${m.pres.toFixed(1)}<span class="s-unit">bar</span></div>
+        ${buildBarFill(m.pres,12,ps)}
+      </div>
+    </div>
+    ${!mini ? `<div class="mc-chart"><canvas id="${chartId}" height="80"></canvas></div>` : ''}
+    <div class="mc-footer">
+      <span class="mc-uptime">Uptime: ${m.uptime}</span>
+      <button class="mc-btn" onclick="event.stopPropagation();openFocus('${m.id}')">Focus View</button>
+    </div>
+  </div>`;
+}
+
+function buildMachineGrid() {
+  document.getElementById('machine-grid').innerHTML = machines.map(m=>buildMachineCard(m)).join('');
+  document.getElementById('dashboard-mini-grid').innerHTML = machines.map(m=>buildMachineCard(m,true)).join('');
+  machines.forEach(m => initMachineChart(m));
+}
+
+/* ═══════════════════════════════════════════
+   CHART: PER-MACHINE MINI CHART
+═══════════════════════════════════════════ */
+function chartConfig(data, color, label) {
+  return {
+    type:'line',
+    data:{
+      labels: Array.from({length:data.length},(_,i)=>''),
+      datasets:[{
+        data, label,
+        borderColor: color,
+        backgroundColor: color.replace(')',', 0.08)').replace('rgb','rgba'),
+        borderWidth: 1.5,
+        pointRadius: 0,
+        tension: 0.4,
+        fill: true,
+      }]
+    },
+    options:{
+      animation:false,
+      plugins:{legend:{display:false},tooltip:{enabled:false}},
+      scales:{x:{display:false},y:{display:false}},
+      responsive:true,
+    }
+  };
+}
+
+function initMachineChart(m) {
+  const el = document.getElementById(`chart-${m.id}`);
+  if(!el) return;
+  if(machineCharts[m.id]) { machineCharts[m.id].destroy(); }
+  const col = m.status==='critical'?'rgb(255,34,68)':m.status==='warn'?'rgb(255,204,0)':'rgb(0,229,204)';
+  machineCharts[m.id] = new Chart(el, chartConfig(machineHistory[m.id].temp, col, 'Temp'));
+}
+
+/* ═══════════════════════════════════════════
+   ANALYTICS CHARTS
+═══════════════════════════════════════════ */
+function buildAnalyticsCharts() {
+  const labels24 = Array.from({length:24},(_,i)=>`${i}:00`);
+  const randArr = (base,range,len=24) => Array.from({length:len},()=>base+(Math.random()-0.5)*range);
+
+  function mk(id, cfg) {
+    const el = document.getElementById(id);
+    if(!el) return;
+    if(analyticsCharts[id]) analyticsCharts[id].destroy();
+    analyticsCharts[id] = new Chart(el, cfg);
+  }
+
+  const gridColor = 'rgba(0,100,200,.1)';
+  const axisColor = '#4a6a9a';
+  const baseOpts = {responsive:true,animation:{duration:800},plugins:{legend:{labels:{color:axisColor,font:{size:11}}}},scales:{x:{grid:{color:gridColor},ticks:{color:axisColor,maxTicksLimit:8}},y:{grid:{color:gridColor},ticks:{color:axisColor}}}};
+
+  mk('analytics-temp-chart',{type:'line',data:{labels:labels24,datasets:[
+    {label:'Motor A',data:randArr(62,12),borderColor:'#00b4ff',backgroundColor:'rgba(0,180,255,.08)',borderWidth:2,pointRadius:0,tension:.4,fill:true},
+    {label:'Pump B',data:randArr(80,8),borderColor:'#ff2244',backgroundColor:'rgba(255,34,68,.08)',borderWidth:2,pointRadius:0,tension:.4,fill:true},
+    {label:'Reactor C',data:randArr(73,7),borderColor:'#ffcc00',backgroundColor:'rgba(255,204,0,.06)',borderWidth:2,pointRadius:0,tension:.4,fill:true},
+  ]},options:{...baseOpts,scales:{...baseOpts.scales,y:{...baseOpts.scales.y,title:{display:true,text:'°C',color:axisColor}}}}});
+
+  mk('analytics-pie-chart',{type:'doughnut',data:{
+    labels:['Critical','Warning','Info','Resolved'],
+    datasets:[{data:[2,1,1,12],backgroundColor:['rgba(255,34,68,.7)','rgba(255,204,0,.7)','rgba(0,180,255,.7)','rgba(0,255,136,.5)'],borderColor:'rgba(0,0,0,.3)',borderWidth:2,hoverOffset:8}]
+  },options:{responsive:true,plugins:{legend:{labels:{color:axisColor,font:{size:11}}}}}});
+
+  mk('analytics-vib-chart',{type:'bar',data:{labels:machines.map(m=>m.name.split(' ')[0]),datasets:[{label:'Vibration mm/s',data:machines.map(m=>m.vib),backgroundColor:machines.map(m=>m.status==='critical'?'rgba(255,34,68,.7)':m.status==='warn'?'rgba(255,204,0,.6)':'rgba(0,229,204,.6)'),borderRadius:4}]},options:{...baseOpts,plugins:{legend:{display:false}}}});
+
+  mk('analytics-press-chart',{type:'line',data:{labels:Array.from({length:20},(_,i)=>`${i*3}m`),datasets:[{label:'Reactor C Pressure',data:randArr(6.8,1.5,20),borderColor:'#9966ff',backgroundColor:'rgba(153,102,255,.08)',borderWidth:2,pointRadius:2,pointBackgroundColor:'#9966ff',tension:.4,fill:true}]},options:{...baseOpts}});
+
+  mk('analytics-eff-chart',{type:'line',data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],datasets:[{label:'Efficiency %',data:[91,89,94,92,96,93,94],borderColor:'#00e5cc',backgroundColor:'rgba(0,229,204,.1)',borderWidth:2.5,pointRadius:4,pointBackgroundColor:'#00e5cc',tension:.4,fill:true}]},options:{...baseOpts,scales:{...baseOpts.scales,y:{...baseOpts.scales.y,min:80,max:100}}}});
+}
+
+function buildRoleCharts() {
+  const axisColor='#4a6a9a';const gridColor='rgba(0,100,200,.1)';
+  const baseOpts={responsive:true,plugins:{legend:{labels:{color:axisColor,font:{size:11}}}},scales:{x:{grid:{color:gridColor},ticks:{color:axisColor}},y:{grid:{color:gridColor},ticks:{color:axisColor}}}};
+
+  const ec=document.getElementById('eng-chart');
+  if(ec){
+    if(analyticsCharts['eng']) analyticsCharts['eng'].destroy();
+    analyticsCharts['eng']=new Chart(ec,{type:'line',data:{labels:Array.from({length:20},(_,i)=>`${i*3}m`),datasets:[
+      {label:'Temp (°C)',data:Array.from({length:20},()=>80+(Math.random()-0.3)*6),borderColor:'#ff2244',borderWidth:1.5,pointRadius:0,tension:.4},
+      {label:'Vibration×10',data:Array.from({length:20},()=>32+(Math.random()-0.4)*8),borderColor:'#ffcc00',borderWidth:1.5,pointRadius:0,tension:.4},
+      {label:'Pressure',data:Array.from({length:20},()=>3.4+(Math.random()-0.5)*.8),borderColor:'#9966ff',borderWidth:1.5,pointRadius:0,tension:.4},
+    ]},options:{...baseOpts,animation:{duration:800}}});
+  }
+
+  const mc=document.getElementById('mgr-chart');
+  if(mc){
+    if(analyticsCharts['mgr']) analyticsCharts['mgr'].destroy();
+    analyticsCharts['mgr']=new Chart(mc,{type:'bar',data:{labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],datasets:[{label:'Units Produced',data:[2650,2800,2700,2900,2847,2500,2750],backgroundColor:'rgba(0,180,255,.4)',borderColor:'rgba(0,180,255,.8)',borderWidth:1,borderRadius:5}]},options:{...baseOpts,animation:{duration:800}}});
+  }
+}
+
+/* ═══════════════════════════════════════════
+   ALERTS RENDERING
+═══════════════════════════════════════════ */
+function renderAlerts() {
+  const list = document.getElementById('alert-list');
+  const filtered = alertFilter==='all' ? alerts :
+    alertFilter==='resolved' ? alerts.filter(a=>a.resolved) :
+    alerts.filter(a=>a.type===alertFilter && !a.resolved);
+
+  document.getElementById('alert-filter-count').textContent = `Showing ${filtered.length} alert${filtered.length!==1?'s':''}`;
+
+  list.innerHTML = filtered.map(a => `
+    <div class="alert-item ${a.type} ${a.resolved?'resolved':''}" id="alert-${a.id}">
+      <div class="alert-header">
+        <span class="alert-badge badge-${a.resolved?'ok':a.type}">${a.resolved?'RESOLVED':a.type.toUpperCase()}</span>
+        <span class="alert-title">${a.title}</span>
+        ${a.grouped>1?`<span class="alert-count-badge">${a.grouped} grouped</span>`:''}
+        <span class="alert-time">${a.time}</span>
+      </div>
+      <div style="font-size:.75rem;color:var(--txt3);font-family:var(--font-mono);margin-bottom:6px;">📍 ${a.machine}</div>
+      <div class="alert-desc">${a.desc}</div>
+      ${a.ai && !a.resolved ? `<div class="alert-ai"><span class="ai-icon">🤖</span><div class="alert-ai-txt"><strong>AI Analysis:</strong> ${a.ai}</div></div>` : ''}
+      ${!a.resolved ? `<div class="alert-actions">
+        <button class="alert-btn ack" onclick="ackAlert(${a.id})">Acknowledge</button>
+        <button class="alert-btn resolve" onclick="resolveAlert(${a.id})">Mark Resolved</button>
+        ${a.type==='crit'?`<button class="alert-btn escalate" onclick="triggerEmergency()">Escalate</button>`:''}
+      </div>` : ''}
+    </div>`).join('');
+
+  const activeCount = alerts.filter(a=>!a.resolved).length;
+  document.getElementById('alert-count-badge').textContent = activeCount;
+  document.getElementById('total-alerts').textContent = activeCount;
+}
+
+function filterAlerts(type, btn) {
+  alertFilter = type;
+  document.querySelectorAll('.alert-filter').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderAlerts();
+}
+
+function ackAlert(id) {
+  const a = alerts.find(x=>x.id===id);
+  if(a) { a.time = 'Acknowledged'; renderAlerts(); }
+}
+
+function resolveAlert(id) {
+  const a = alerts.find(x=>x.id===id);
+  if(a) { a.resolved=true; a.time='Resolved'; renderAlerts(); updateHealth(); }
+}
+
+function clearResolved() {
+  alerts = alerts.filter(a=>!a.resolved);
+  renderAlerts();
+}
+
+function updateHealth() {
+  const crit = alerts.filter(a=>!a.resolved&&a.type==='crit').length;
+  const warn = alerts.filter(a=>!a.resolved&&a.type==='warn').length;
+  const h = Math.max(50, 100 - crit*10 - warn*5);
+  document.getElementById('health-fill').style.width = h+'%';
+  document.getElementById('health-pct').textContent = h+'%';
+  document.getElementById('health-pct').style.color = h>80?'var(--green)':h>60?'var(--yellow)':'var(--red)';
+}
+
+/* ═══════════════════════════════════════════
+   ACTIVITY FEED
+═══════════════════════════════════════════ */
+const activities = [
+  {t:'2 min ago',  icon:'🔴', msg:'Critical alert generated: Pump B temperature spike to 82°C'},
+  {t:'8 min ago',  icon:'🟡', msg:'Warning: Reactor C gas level approaching threshold (28 ppm)'},
+  {t:'15 min ago', icon:'🔵', msg:'Motor A resumed normal operation — temperature stabilized'},
+  {t:'22 min ago', icon:'✅', msg:'Routine maintenance completed on Heat Exchanger E'},
+  {t:'45 min ago', icon:'🟡', msg:'Pressure fluctuation detected in Reactor C — monitoring'},
+];
+
+function buildActivityFeed() {
+  document.getElementById('activity-feed').innerHTML = activities.map(a=>
+    `<div style="display:flex;gap:12px;align-items:flex-start;padding:10px 14px;background:var(--panel);border:1px solid var(--bdr);border-radius:8px;font-size:.84rem;">
+      <span style="font-size:1rem;flex-shrink:0;">${a.icon}</span>
+      <div style="flex:1;color:var(--txt2)">${a.msg}</div>
+      <span style="font-family:var(--font-mono);font-size:.68rem;color:var(--txt3);flex-shrink:0;">${a.t}</span>
+    </div>`).join('');
+}
+
+/* ═══════════════════════════════════════════
+   FOCUS MODE
+═══════════════════════════════════════════ */
+function openFocus(id) {
+  const m = machines.find(x=>x.id===id);
+  if(!m) return;
+  currentFocusMachineId = id;
+  document.getElementById('focus-machine-name').textContent = m.name + ' — ' + m.id;
+
+  const ts=getSensorClass(m.temp,70,80), gs=getSensorClass(m.gas,20,30);
+  const vs=getSensorClass(m.vib,1.5,2.5), ps=getSensorClass(m.pres,7,9);
+
+  document.getElementById('focus-sensors').innerHTML = `
+    <div class="sensor ${ts==='crit'?'alert':ts==='warn'?'warn':''}"><div class="s-name">Temperature</div><div class="s-val ${ts}">${m.temp}<span class="s-unit">°C</span></div>${buildBarFill(m.temp,100,ts)}</div>
+    <div class="sensor ${gs==='crit'?'alert':gs==='warn'?'warn':''}"><div class="s-name">Gas Level</div><div class="s-val ${gs}">${m.gas}<span class="s-unit">ppm</span></div>${buildBarFill(m.gas,50,gs)}</div>
+    <div class="sensor ${vs==='crit'?'alert':vs==='warn'?'warn':''}"><div class="s-name">Vibration</div><div class="s-val ${vs}">${m.vib.toFixed(1)}<span class="s-unit">mm/s</span></div>${buildBarFill(m.vib,5,vs)}</div>
+    <div class="sensor ${ps==='crit'?'alert':ps==='warn'?'warn':''}"><div class="s-name">Pressure</div><div class="s-val ${ps}">${m.pres.toFixed(1)}<span class="s-unit">bar</span></div>${buildBarFill(m.pres,12,ps)}</div>`;
+
+  const actions = m.status==='critical' ? [
+    'Immediately reduce machine load to 30% and alert maintenance',
+    'Activate backup unit if available',
+    'Monitor temperature every 5 minutes — escalate if above critical threshold',
+    'Document incident and notify shift supervisor',
+  ] : m.status==='warn' ? [
+    'Monitor sensor values closely for further deterioration',
+    'Schedule preventive inspection at next opportunity',
+    'Review recent calibration data for sensor drift',
+  ] : [
+    'No immediate action required',
+    'Continue standard monitoring cycle',
+    'Next scheduled maintenance: see maintenance log',
+  ];
+
+  document.getElementById('focus-actions-list').innerHTML = actions.map(a=>`<div class="action-item">${a}</div>`).join('');
+
+  const fctx = document.getElementById('focus-chart');
+  if(focusChart) focusChart.destroy();
+  const hist = machineHistory[id];
+  focusChart = new Chart(fctx, {
+    type:'line',
+    data:{
+      labels:Array.from({length:historyLen},(_,i)=>`${i}`),
+      datasets:[
+        {label:'Temp (°C)', data:[...hist.temp], borderColor:'#ff2244', borderWidth:2, pointRadius:0, tension:.4},
+        {label:'Vib×10',   data:hist.vib.map(v=>v*10), borderColor:'#ffcc00', borderWidth:2, pointRadius:0, tension:.4},
+        {label:'Pressure',  data:[...hist.pres], borderColor:'#9966ff', borderWidth:2, pointRadius:0, tension:.4},
+      ]
+    },
+    options:{
+      responsive:true, animation:{duration:400},
+      plugins:{legend:{labels:{color:'#4a6a9a',font:{size:10}}}},
+      scales:{x:{display:false},y:{grid:{color:'rgba(0,100,200,.1)'},ticks:{color:'#4a6a9a'}}}
+    }
+  });
+
+  document.getElementById('focus-overlay').classList.add('active');
+}
+
+function closeFocus() {
+  document.getElementById('focus-overlay').classList.remove('active');
+  currentFocusMachineId = null;
+  if(focusChart){focusChart.destroy();focusChart=null;}
+}
+
+/* ═══════════════════════════════════════════
+   EMERGENCY
+═══════════════════════════════════════════ */
+function triggerEmergency() {
+  const crit = machines.find(m=>m.status==='critical');
+  if(crit) {
+    document.getElementById('emg-machine').textContent = crit.name + ' — ' + crit.id;
+    document.getElementById('emg-issue').textContent = `Critical parameters detected: Temperature ${crit.temp}°C, Vibration ${crit.vib} mm/s, Gas ${crit.gas} ppm. Immediate operator action required to prevent equipment damage.`;
+  }
+  document.getElementById('emergency-overlay').classList.add('active');
+  document.getElementById('topbar').style.borderBottomColor='rgba(255,34,68,.8)';
+  document.getElementById('topbar').style.background='rgba(40,0,0,.9)';
+}
+
+function dismissEmergency() {
+  document.getElementById('emergency-overlay').classList.remove('active');
+  document.getElementById('topbar').style.borderBottomColor='';
+  document.getElementById('topbar').style.background='';
+}
+
+function shutdownMachine() {
+  const m = machines.find(x=>x.status==='critical');
+  if(m){ m.status='warn'; m.temp=65; m.vib=1.0; }
+  dismissEmergency();
+  buildMachineGrid();
+  activities.unshift({t:'Just now', icon:'⛔', msg:`Emergency shutdown executed on ${m?.name||'critical unit'}`});
+  buildActivityFeed();
+  alert('Machine isolated. Backup systems engaged.');
+}
+
+function isolateMachine() {
+  dismissEmergency();
+  activities.unshift({t:'Just now', icon:'⚠', msg:'Unit isolated — operator monitoring manually'});
+  buildActivityFeed();
+}
+
+/* ═══════════════════════════════════════════
+   ROLE MODAL
+═══════════════════════════════════════════ */
+function openRoleModal() {
+  document.getElementById('role-modal').classList.add('active');
+}
+
+function selectRole(role, el) {
+  selectedRole = role;
+  document.querySelectorAll('.rm-opt').forEach(o=>o.classList.remove('selected'));
+  el.classList.add('selected');
+}
+
+function confirmRole() {
+  currentRole = selectedRole;
+  const labels={operator:'OPERATOR',engineer:'ENGINEER',manager:'MANAGER'};
+  document.getElementById('role-tag').textContent = labels[currentRole];
+  document.getElementById('role-modal').classList.remove('active');
+  showPage('roles');
+  setTimeout(()=>switchRoleView(currentRole, document.querySelector('.role-btn')), 100);
+}
+
+function switchRoleView(role, btn) {
+  document.querySelectorAll('.role-view').forEach(v=>v.classList.remove('active'));
+  document.querySelectorAll('.role-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('role-'+role)?.classList.add('active');
+  btn?.classList.add('active');
+  if(role==='engineer'||role==='manager') setTimeout(buildRoleCharts, 100);
+}
+
+/* ═══════════════════════════════════════════
+   ADD NEW MACHINE
+═══════════════════════════════════════════ */
+function addNewMachine() {
+  const name = document.getElementById('new-machine-name').value.trim();
+  const type = document.getElementById('new-machine-type').value;
+  if(!name){alert('Please enter a machine name.');return;}
+  const id = type.slice(0,3).toUpperCase()+'-0'+(machines.length+1);
+  const newM = {
+    id, name, type: type.charAt(0).toUpperCase()+type.slice(1),
+    status:'ok', uptime:'100%',
+    temp: 50+Math.round(Math.random()*20),
+    gas:  Math.round(8+Math.random()*8),
+    vib:  parseFloat((0.5+Math.random()*0.8).toFixed(1)),
+    pres: parseFloat((3+Math.random()*4).toFixed(1)),
+  };
+  machines.push(newM);
+  machineHistory[id] = {
+    temp: Array.from({length:historyLen},()=>newM.temp+(Math.random()-0.5)*4),
+    vib:  Array.from({length:historyLen},()=>newM.vib+(Math.random()-0.5)*.2),
+    pres: Array.from({length:historyLen},()=>newM.pres+(Math.random()-0.5)*.3),
+  };
+  document.getElementById('new-machine-name').value='';
+  buildMachineGrid();
+  document.getElementById('active-machines').textContent = machines.length;
+  activities.unshift({t:'Just now', icon:'🔵', msg:`New machine auto-generated: ${name} (${id})`});
+  buildActivityFeed();
+}
+
+/* ═══════════════════════════════════════════
+   REAL-TIME SIMULATION
+═══════════════════════════════════════════ */
+function simulateTick() {
+  machines.forEach(m => {
+    m.temp = +(m.temp + (Math.random()-0.48)*1.2).toFixed(1);
+    m.gas  = Math.max(5, +(m.gas  + (Math.random()-0.5)*0.8).toFixed(1));
+    m.vib  = Math.max(0.1, +(m.vib + (Math.random()-0.48)*0.08).toFixed(2));
+    m.pres = Math.max(1, +(m.pres + (Math.random()-0.5)*0.15).toFixed(1));
+
+    if(m.id==='PMP-002'){m.temp=Math.max(75,Math.min(92,m.temp));m.vib=Math.max(2.5,Math.min(4.0,m.vib));}
+    if(m.id==='RCT-003'){m.gas=Math.max(24,Math.min(32,m.gas));}
+
+    const prevStatus = m.status;
+    if(m.temp>=80 || m.vib>=2.5 || m.gas>=30) m.status='critical';
+    else if(m.temp>=70 || m.vib>=1.5 || m.gas>=20 || m.pres>=7) m.status='warn';
+    else m.status='ok';
+
+    const h = machineHistory[m.id];
+    h.temp.push(m.temp); h.temp.shift();
+    h.vib.push(m.vib);   h.vib.shift();
+    h.pres.push(m.pres); h.pres.shift();
+
+    ['temp','gas','vib','pres'].forEach(s => {
+      const val = s==='vib'?m.vib.toFixed(1):s==='pres'?m.pres.toFixed(1):m[s];
+      const cl = s==='temp'?getSensorClass(m.temp,70,80):s==='gas'?getSensorClass(m.gas,20,30):s==='vib'?getSensorClass(m.vib,1.5,2.5):getSensorClass(m.pres,7,9);
+      ['','-mini'].forEach(sfx => {
+        const el = document.getElementById(`sv-${s}-${m.id}${sfx}`);
+        if(el){ el.childNodes[0].textContent=val; el.className=`s-val ${cl}`; }
+      });
+    });
+
+    if(machineCharts[m.id]) {
+      const ch = machineCharts[m.id];
+      ch.data.datasets[0].data = [...machineHistory[m.id].temp];
+      const col = m.status==='critical'?'rgb(255,34,68)':m.status==='warn'?'rgb(255,204,0)':'rgb(0,229,204)';
+      ch.data.datasets[0].borderColor = col;
+      ch.update('none');
+    }
+
+    ['','-mini'].forEach(sfx => {
+      const card = document.getElementById(`mc-${m.id}${sfx}`);
+      if(card){ card.className=`machine-card status-${m.status}`; }
+    });
+
+    if(m.status==='critical' && prevStatus!=='critical') {
+      alerts.unshift({
+        id: Date.now(), type:'crit',
+        title:`Critical Alert: ${m.name}`,
+        machine:`${m.name} (${m.id})`,
+        desc:`Auto-detected: Temperature ${m.temp}°C, Vibration ${m.vib} mm/s, Gas ${m.gas} ppm all approaching or exceeding critical thresholds.`,
+        grouped:1,
+        ai:`AI Pattern Match: Sensor correlation indicates possible ${m.type.toLowerCase()} overload. Cross-checking with historical failure data — 78% match with bearing failure signature.`,
+        time:'Just now', resolved:false
+      });
+      renderAlerts();
+    }
+  });
+
+  const pr = (90 + Math.random()*8).toFixed(0);
+  document.getElementById('prod-rate').textContent = pr+'%';
+
+  if(focusChart && document.getElementById('focus-overlay').classList.contains('active') && currentFocusMachineId) {
+    const m2 = machines.find(x=>x.id===currentFocusMachineId);
+    if(m2) {
+      const h = machineHistory[m2.id];
+      focusChart.data.datasets[0].data = [...h.temp];
+      focusChart.data.datasets[1].data = h.vib.map(v=>v*10);
+      focusChart.data.datasets[2].data = [...h.pres];
+      focusChart.update('none');
+    }
+  }
+}
+
+/* ═══════════════════════════════════════════
+   INIT
+═══════════════════════════════════════════ */
+buildMachineGrid();
+buildActivityFeed();
+renderAlerts();
+setInterval(simulateTick, 1500);
+
+// Auto-navigate if opened via new tab button
+if(window._autoNavPage) {
+  showPage(window._autoNavPage);
+  if(window._autoNavMachine) {
+    setTimeout(() => openFocus(window._autoNavMachine), 400);
+  }
+}
+
+// Close modals on outside click
+document.getElementById('role-modal').addEventListener('click', function(e){
+  if(e.target===this) this.classList.remove('active');
+});
+document.getElementById('focus-overlay').addEventListener('click', function(e){
+  if(e.target===this) closeFocus();
+});
+</script>
+</body>
+</html>
