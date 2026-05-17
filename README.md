@@ -1,1 +1,1 @@
-https://github.io/Harikrishna396/IoT-Enabled-Intelligent-Alert-and-Monitoring-System/
+https://Harikrishna396.github.io/IoT-Enabled-Intelligent-Alert-and-Monitoring-System/
